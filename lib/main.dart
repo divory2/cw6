@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,7 +34,9 @@ class InventoryHomePage extends StatefulWidget {
 
 class _InventoryHomePageState extends State<InventoryHomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const List<String> dropdownmenuList = <String> ['high','medium','low'];
 
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,7 +44,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
         title: Text(widget.title),
       ),
       body: StreamBuilder(
-        stream: _firestore.collection('inventory').snapshots(),
+        stream: _firestore.collection('checkList').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -53,7 +57,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
               var data = doc.data() as Map<String, dynamic>;
               return ListTile(
                 title: Text(data['name'] ?? 'Unnamed Item'),
-                subtitle: Text('Quantity: ${data['quantity'] ?? 0}'),
+                subtitle: Text('priority: ${data['priority'] ?? 0}'),
                 trailing: IconButton(
                   icon: Icon(Icons.delete),
                   onPressed: () => _deleteItem(doc.id),
@@ -76,16 +80,52 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
     showDialog(
       context: context,
       builder: (context) {
+         
+        String dropDownMenuValue = dropdownmenuList.first;
         TextEditingController nameController = TextEditingController();
         TextEditingController quantityController = TextEditingController();
+        int priority_value = 0;
         return AlertDialog(
           title: Text('Add Inventory Item'),
-          content: Column(
+          content: StatefulBuilder(
+            builder: (context, setState)  {
+                 return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: nameController, decoration: InputDecoration(labelText: 'Item Name')),
-              TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Quantity'), keyboardType: TextInputType.number),
+              TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
+              DropdownButton<String>(
+                value: dropDownMenuValue,
+                items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
+                      return DropdownMenuItem<String>(value: value, child:
+                      Text(value));
+                }).toList(),
+
+                
+               
+                onChanged: (String? value) { 
+                  setState(() {
+                    dropDownMenuValue = value!;
+                    if(dropDownMenuValue == "high"){
+                      priority_value = 3;
+                    }
+                    else if (dropDownMenuValue == "medium"){
+                      priority_value = 2;
+                    }
+                    else{
+                      priority_value = 1;
+                    }
+                  });
+
+                 },
+                
+                
+                ),
             ],
+          );
+            }
+           
+          
           ),
           actions: [
             TextButton(
@@ -96,7 +136,9 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
               onPressed: () {
                 _firestore.collection('inventory').add({
                   'name': nameController.text,
-                  'quantity': int.tryParse(quantityController.text) ?? 0,
+                  //'priority': int.tryParse(quantityController.text) ?? 0,
+                  'priority': dropDownMenuValue,
+                  'priority_value': priority_value
                 });
                 Navigator.pop(context);
               },
@@ -110,7 +152,10 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
 
   void _editItem(String id, Map<String, dynamic> data) {
     TextEditingController nameController = TextEditingController(text: data['name']);
-    TextEditingController quantityController = TextEditingController(text: data['quantity'].toString());
+    TextEditingController quantityController = TextEditingController(text: data['priority'].toString());
+    int priority_value = 0;
+    String dropDownMenuValue = dropdownmenuList.first;
+    
     showDialog(
       context: context,
       builder: (context) {
@@ -120,7 +165,34 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: nameController, decoration: InputDecoration(labelText: 'Item Name')),
-              TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Quantity'), keyboardType: TextInputType.number),
+              TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
+              DropdownButton<String>(
+                value: dropDownMenuValue,
+                items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
+                      return DropdownMenuItem<String>(value: value, child:
+                      Text(value));
+                }).toList(),
+
+                
+               
+                onChanged: (String? value) { 
+                  setState(() {
+                    dropDownMenuValue = value!;
+                    if(dropDownMenuValue == "high"){
+                      priority_value = 3;
+                    }
+                    else if (dropDownMenuValue == "medium"){
+                      priority_value = 2;
+                    }
+                    else{
+                      priority_value = 1;
+                    }
+                  });
+
+                 },
+                
+                
+                ),
             ],
           ),
           actions: [
@@ -130,9 +202,11 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             ),
             TextButton(
               onPressed: () {
-                _firestore.collection('inventory').doc(id).update({
+                _firestore.collection('checkList').doc(id).update({
                   'name': nameController.text,
-                  'quantity': int.tryParse(quantityController.text) ?? 0,
+                 // 'quantity': int.tryParse(quantityController.text) ?? 0,
+                  'priority': dropDownMenuValue,
+                  'priority_value': priority_value
                 });
                 Navigator.pop(context);
               },
@@ -145,6 +219,6 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
   }
 
   void _deleteItem(String id) {
-    _firestore.collection('inventory').doc(id).delete();
+    _firestore.collection('checkList').doc(id).delete();
   }
 }
