@@ -56,6 +56,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             children: snapshot.data!.docs.map((doc) {
               var data = doc.data() as Map<String, dynamic>;
               return ListTile(
+                
                 title: Text(data['name'] ?? 'Unnamed Item'),
                 subtitle: Text('priority: ${data['priority'] ?? 0}'),
                 trailing: IconButton(
@@ -70,7 +71,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
-        tooltip: 'Add Item',
+        tooltip: 'Add Task',
         child: Icon(Icons.add),
       ),
     );
@@ -83,17 +84,17 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
          
         String dropDownMenuValue = dropdownmenuList.first;
         TextEditingController nameController = TextEditingController();
-        TextEditingController quantityController = TextEditingController();
+       // TextEditingController quantityController = TextEditingController();
         int priority_value = 0;
         return AlertDialog(
-          title: Text('Add Inventory Item'),
+          title: Text('Add Task'),
           content: StatefulBuilder(
             builder: (context, setState)  {
                  return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameController, decoration: InputDecoration(labelText: 'Item Name')),
-              TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
+              TextField(controller: nameController, decoration: InputDecoration(labelText: 'Task Name')),
+              //TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
               DropdownButton<String>(
                 value: dropDownMenuValue,
                 items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
@@ -134,7 +135,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             ),
             TextButton(
               onPressed: () {
-                _firestore.collection('inventory').add({
+                _firestore.collection('checkList').add({
                   'name': nameController.text,
                   //'priority': int.tryParse(quantityController.text) ?? 0,
                   'priority': dropDownMenuValue,
@@ -152,7 +153,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
 
   void _editItem(String id, Map<String, dynamic> data) {
     TextEditingController nameController = TextEditingController(text: data['name']);
-    TextEditingController quantityController = TextEditingController(text: data['priority'].toString());
+    //TextEditingController quantityController = TextEditingController(text: data['priority'].toString());
     int priority_value = 0;
     String dropDownMenuValue = dropdownmenuList.first;
     
@@ -160,12 +161,12 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Edit Inventory Item'),
+          title: Text('Edit Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameController, decoration: InputDecoration(labelText: 'Item Name')),
-              TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
+              TextField(controller: nameController, decoration: InputDecoration(labelText: 'Task Name')),
+              //TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
               DropdownButton<String>(
                 value: dropDownMenuValue,
                 items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
