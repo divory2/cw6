@@ -34,10 +34,11 @@ class InventoryHomePage extends StatefulWidget {
 
 class _InventoryHomePageState extends State<InventoryHomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const List<String> dropdownmenuList = <String> ['high','medium','low'];
+  static const List<String> dropdownmenuList = <String> ['','high','medium','low',];
   Map<String, bool> selectedTaskList = {};
   List <String> checked = [];
   List<String> unchecked=[];
+  String? _filterPriority;
   
   void _selectedTask(bool ?status, String name,String id){
    selectedTaskList[name]= status??false;
@@ -65,31 +66,144 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
                 });
     
   }
+  String _sortOrder= 'none';
+   String dropDownMenuValue = dropdownmenuList.first;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        
       ),
-      body: StreamBuilder(
-        stream: _firestore.collection('checkList').snapshots(),
+     
+
+      body:Column( 
+        children: [
+          PopupMenuButton(itemBuilder: (context)=> 
+          [
+            PopupMenuItem(value: "High to Low",child: 
+                            Text("High to Low"),),
+            PopupMenuItem(value: "Low to High",child: 
+                            Text("Low to High"),),
+                          PopupMenuItem(value: "Due Date To Earliest",child: 
+                            Text("Due Date To Earliest"),),
+                          PopupMenuItem(value: "Due Date To Latest",child: 
+                            Text("Due Date To Latest"),),
+                           PopupMenuItem(value: "Incomplet To Completed",child: 
+                            Text("Incomplet To Completed"),),
+                          PopupMenuItem(value: "Complet To Incompleted",child: 
+                            Text("Complet To Incompleted"),),
+            
+
+          ],
+          onSelected: (String value) {
+            setState(() {
+              _sortOrder = value;
+            });
+          },
+          ),
+          SizedBox(width: 20,),
+           DropdownButton<String>(
+                hint: Text("filter by priority"),
+                value: _filterPriority,
+                items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
+                      return DropdownMenuItem<String>(value: value, child:
+                      Text(value));
+                }).toList(),
+
+                
+               
+                onChanged: (String? value) { 
+                  setState(() {
+                    _filterPriority = value!;
+                    
+                  });
+
+                 },
+                
+                
+                ),
+           Expanded(
+        child:
+          StreamBuilder(
+        stream: _filterPriority == ''
+    ? _firestore.collection('checkList').snapshots()
+    : _firestore
+        .collection('checkList')
+        .where('priority', isEqualTo: _filterPriority)
+        .snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            var docs = snapshot.data!.docs;
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(child: Text('No inventory items available.'));
           }
-            var docs = snapshot.data!.docs;
+          
           selectedTaskList = {
             for (var doc in docs)
               (doc.data() as Map<String, dynamic>)['name']: (doc.data() as Map<String, dynamic>)['completionstatus'] ?? false
           };
+          
+          if(_sortOrder == "High to Low"){
+            
+            docs.sort((a, b) {
+              int sortedAval = (a.data()as Map<String,dynamic>)['priority_value']??0;
+              int sortedBval = (b.data()as Map<String,dynamic>)['priority_value']??0;
+              return sortedBval.compareTo(sortedAval);
+            },);
+
+          }
+          else if(_sortOrder == "Low to High"){
+            
+            docs.sort((a, b) {
+              int sortedAval = (a.data()as Map<String,dynamic>)['priority_value']??0;
+              int sortedBval = (b.data()as Map<String,dynamic>)['priority_value']??0;
+              return sortedAval.compareTo(sortedBval);
+            },);
+
+          }
+          else if(_sortOrder == "Due Date To Earliest"){
+            docs.sort((a, b) {
+              Timestamp sortedAval = (a.data()as Map<String,dynamic>)['dueDate'];
+              Timestamp sortedBval = (b.data()as Map<String,dynamic>)['dueDate'];
+              DateTime dateA = sortedAval.toDate();
+              DateTime dateB = sortedBval.toDate();
+              return dateA.compareTo(dateB);
+            },);
+
+          }else if(_sortOrder == "Due Date To Latest"){
+            docs.sort((a, b) {
+              Timestamp sortedAval = (a.data()as Map<String,dynamic>)['dueDate'];
+              Timestamp sortedBval = (b.data()as Map<String,dynamic>)['dueDate'];
+              DateTime dateA = sortedAval.toDate();
+              DateTime dateB = sortedBval.toDate();
+              return dateB.compareTo(dateA);
+            },);
+
+          }
+          else if(_sortOrder == "Incomplet To Completed"){
+            docs.sort((a, b) {
+              bool sortedAval = (a.data()as Map<String,dynamic>)['completionstatus']??false;
+              bool sortedBval = (b.data()as Map<String,dynamic>)['completionstatus']??false;
+              return sortedAval.toString().compareTo(sortedBval.toString());
+            },);
+
+          }
+          else if(_sortOrder == "Complet To Incompleted"){
+            docs.sort((a, b) {
+              bool sortedAval = (a.data()as Map<String,dynamic>)['completionstatus']??false;
+              bool sortedBval = (b.data()as Map<String,dynamic>)['completionstatus']??false;
+              return sortedBval.toString().compareTo(sortedAval.toString());
+            },);
+
+          }
 
             
           
           return ListView(
-            children: snapshot.data!.docs.map((doc) {
+            children: docs.map((doc) {
               var data = doc.data() as Map<String, dynamic>;
               var taskName = data['name'];
               return ListTile(
@@ -109,11 +223,22 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
           );
         },
       ),
+      
+
+      ),
+      ]
+
+      
+
+      
+
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
         tooltip: 'Add Task',
         child: Icon(Icons.add),
       ),
+     
     );
   }
 
