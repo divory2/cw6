@@ -35,10 +35,13 @@ class InventoryHomePage extends StatefulWidget {
 class _InventoryHomePageState extends State<InventoryHomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const List<String> dropdownmenuList = <String> ['','high','medium','low',];
+  static const List<String> dropdownCompletionmenuList = <String> ['','incomplete','complete'];
   Map<String, bool> selectedTaskList = {};
   List <String> checked = [];
   List<String> unchecked=[];
   String? _filterPriority;
+  String? _filterCompletionStatus;
+  bool? _completionStatusFilter;
   
   void _selectedTask(bool ?status, String name,String id){
    selectedTaskList[name]= status??false;
@@ -70,6 +73,17 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
    String dropDownMenuValue = dropdownmenuList.first;
   @override
   Widget build(BuildContext context) {
+    Query<Map<String, dynamic>> query = _firestore.collection('checkList');
+     // Apply priority filter if selected
+  if (_filterPriority != null && _filterPriority!.isNotEmpty) {
+    query = query.where('priority', isEqualTo: _filterPriority);
+  }
+
+  // Apply completion status filter if selected
+  if (_filterCompletionStatus != null && _filterCompletionStatus!.isNotEmpty) {
+    bool completionStatus = _filterCompletionStatus == 'complete';
+    query = query.where('completionstatus', isEqualTo: completionStatus);
+  }
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -115,7 +129,34 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
                
                 onChanged: (String? value) { 
                   setState(() {
-                    _filterPriority = value!;
+                    _filterCompletionStatus = value!;
+                    if(value == 'incomplete'){
+                      _completionStatusFilter = false;
+                    }
+                    else if(value =='complete'){
+                      _completionStatusFilter = true;
+                    }
+                    
+                  });
+
+                 },
+                
+                
+                ),
+                SizedBox(width: 20,),
+           DropdownButton<String>(
+                hint: Text("filter by completion Status"),
+                value: _filterCompletionStatus,
+                items: dropdownCompletionmenuList.map<DropdownMenuItem<String>>((String value){
+                      return DropdownMenuItem<String>(value: value, child:
+                      Text(value));
+                }).toList(),
+
+                
+               
+                onChanged: (String? value) { 
+                  setState(() {
+                    _filterCompletionStatus = value!;
                     
                   });
 
@@ -126,12 +167,7 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
            Expanded(
         child:
           StreamBuilder(
-        stream: _filterPriority == ''
-    ? _firestore.collection('checkList').snapshots()
-    : _firestore
-        .collection('checkList')
-        .where('priority', isEqualTo: _filterPriority)
-        .snapshots(),
+        stream: query.snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
             var docs = snapshot.data!.docs;
           if (snapshot.connectionState == ConnectionState.waiting) {
