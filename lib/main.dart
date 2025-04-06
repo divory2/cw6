@@ -3,7 +3,7 @@ import 'dart:collection';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:intl/intl.dart';
 void main() async{
 WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -84,7 +84,9 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
          
         String dropDownMenuValue = dropdownmenuList.first;
         TextEditingController nameController = TextEditingController();
+        TextEditingController dateController = TextEditingController();
        // TextEditingController quantityController = TextEditingController();
+       
         int priority_value = 0;
         return AlertDialog(
           title: Text('Add Task'),
@@ -95,6 +97,30 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             children: [
               TextField(controller: nameController, decoration: InputDecoration(labelText: 'Task Name')),
               //TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
+              TextField(
+                  controller: dateController,
+                  decoration: InputDecoration(
+                                  labelText: "Due Date", ),
+                  readOnly: true,
+                  onTap: ()async{
+                    DateTime? pickedDate = await showDatePicker(
+                        context: context, 
+                        firstDate: DateTime(2000), 
+                        lastDate: DateTime(2101),
+                        initialDate: DateTime.now(),
+                        );
+                        if(pickedDate !=null){
+                          String formatedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
+                          setState(() {
+                               dateController.text = formatedDate;
+                              });
+                          
+
+                  }
+
+                  },
+                  
+              ),
               DropdownButton<String>(
                 value: dropDownMenuValue,
                 items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
@@ -135,10 +161,14 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             ),
             TextButton(
               onPressed: () {
+              var parsedDate = DateFormat('dd-MM-yyyy').parse(dateController.text);
+              parsedDate = DateTime(parsedDate.year,parsedDate.month,parsedDate.day);
+
                 _firestore.collection('checkList').add({
                   'name': nameController.text,
                   //'priority': int.tryParse(quantityController.text) ?? 0,
                   'priority': dropDownMenuValue,
+                  'dueDate': parsedDate,
                   'priority_value': priority_value
                 });
                 Navigator.pop(context);
@@ -156,7 +186,8 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
     //TextEditingController quantityController = TextEditingController(text: data['priority'].toString());
     int priority_value = 0;
     String dropDownMenuValue = dropdownmenuList.first;
-    
+    TextEditingController dateController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) {
@@ -167,6 +198,30 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             children: [
               TextField(controller: nameController, decoration: InputDecoration(labelText: 'Task Name')),
               //TextField(controller: quantityController, decoration: InputDecoration(labelText: 'Priority'), keyboardType: TextInputType.number),
+              TextField(
+                  controller: dateController,
+                  decoration: InputDecoration(
+                                  labelText: "Due Date", ),
+                  readOnly: true,
+                  onTap: ()async{
+                    DateTime? pickedDate = await showDatePicker(
+                        context: context, 
+                        firstDate: DateTime(2000), 
+                        lastDate: DateTime(2101),
+                        initialDate: DateTime.now(),
+                        );
+                        if(pickedDate !=null){
+                          String formatedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
+                          setState(() {
+                               dateController.text = formatedDate;
+                              });
+                          
+
+                  }
+
+                  },
+                  
+              ),
               DropdownButton<String>(
                 value: dropDownMenuValue,
                 items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
@@ -203,9 +258,12 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
             ),
             TextButton(
               onPressed: () {
+                var parsedDate = DateFormat('dd-MM-yyyy').parse(dateController.text);
+                parsedDate = DateTime(parsedDate.year,parsedDate.month,parsedDate.day);
                 _firestore.collection('checkList').doc(id).update({
                   'name': nameController.text,
                  // 'quantity': int.tryParse(quantityController.text) ?? 0,
+                  'dueDate':parsedDate,
                   'priority': dropDownMenuValue,
                   'priority_value': priority_value
                 });
