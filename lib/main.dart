@@ -35,8 +35,36 @@ class InventoryHomePage extends StatefulWidget {
 class _InventoryHomePageState extends State<InventoryHomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const List<String> dropdownmenuList = <String> ['high','medium','low'];
-
+  Map<String, bool> selectedTaskList = {};
+  List <String> checked = [];
+  List<String> unchecked=[];
   
+  void _selectedTask(bool ?status, String name,String id){
+   selectedTaskList[name]= status??false;
+   setState(() {
+     if(status == true){
+      if(!checked.contains(name)){
+          unchecked.remove(name);
+          checked.add(name);
+           
+      }
+      
+    }
+    else{
+      if(!unchecked.contains(name)){
+          checked.remove(name);
+          unchecked.add(name);
+          
+
+      }
+    }
+
+   });
+   _firestore.collection('checkList').doc(id).update({
+                 'completionstatus': status??false
+                });
+    
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,11 +80,23 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(child: Text('No inventory items available.'));
           }
+            var docs = snapshot.data!.docs;
+          selectedTaskList = {
+            for (var doc in docs)
+              (doc.data() as Map<String, dynamic>)['name']: (doc.data() as Map<String, dynamic>)['completionstatus'] ?? false
+          };
+
+            
+          
           return ListView(
             children: snapshot.data!.docs.map((doc) {
               var data = doc.data() as Map<String, dynamic>;
+              var taskName = data['name'];
               return ListTile(
-                
+                leading: Checkbox(value: selectedTaskList[taskName] , onChanged: (bool?value){
+                  _selectedTask(value, taskName, doc.id);
+
+                },),
                 title: Text(data['name'] ?? 'Unnamed Item'),
                 subtitle: Text('priority: ${data['priority'] ?? 0}'),
                 trailing: IconButton(
