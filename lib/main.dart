@@ -370,7 +370,8 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
                   //'priority': int.tryParse(quantityController.text) ?? 0,
                   'priority': dropDownMenuValue,
                   'dueDate': parsedDate,
-                  'priority_value': priority_value
+                  'priority_value': priority_value,
+                  'completionstatus': false
                 });
                 Navigator.pop(context);
               },
