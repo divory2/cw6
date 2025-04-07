@@ -238,7 +238,16 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(title: Text(widget.title),
+      actions: [
+    IconButton(
+      icon: Icon(Icons.logout),
+      tooltip: 'Sign Out',
+      onPressed: () async {
+        await _auth.signOut();
+      },
+    ),
+  ],),
       body: Column(
         children: [
           PopupMenuButton<String>(
