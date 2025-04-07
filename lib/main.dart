@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 void main() async{
 WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -34,15 +35,118 @@ class InventoryHomePage extends StatefulWidget {
 
 class _InventoryHomePageState extends State<InventoryHomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const List<String> dropdownmenuList = <String> ['','high','medium','low',];
-  static const List<String> dropdownCompletionmenuList = <String> ['','incomplete','complete'];
+
+  static const List<String> dropdownmenuList = <String> ['high','medium','low',];
+  static const List<String> dropdownCompletionmenuList = <String> ['incomplete','complete'];
   Map<String, bool> selectedTaskList = {};
   List <String> checked = [];
   List<String> unchecked=[];
   String? _filterPriority;
   String? _filterCompletionStatus;
   bool? _completionStatusFilter;
-  
+  var _auth =FirebaseAuth.instance;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  String? _error;
+  @override
+  void initState() {
+    super.initState();
+    _initializeAsync();
+    
+  }
+
+  Future<void> _initializeAsync() async {
+    await  _auth
+  .authStateChanges()
+  .listen((User? user) async {
+    if (user == null) {
+      print('User is currently signed out!');
+      _signInMenu();
+    } else {
+      print('User is signed in!');
+    }
+  });// your async logic here (e.g. fetching user data, loading Firestore, etc.)
+}
+   void _signIn() async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      Navigator.pop(
+        context,
+       
+      );
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
+  }
+void _register() async {
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      _signIn(); // Auto sign-in after registration
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
+  }
+
+
+
+
+void _signInMenu() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+         
+        
+        int priority_value = 0;
+        return AlertDialog(
+          title: Text('Sign in menu'),
+          content: StatefulBuilder(
+            builder: (context, setState)  {
+                 return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_error != null)
+              Text(_error!, style: TextStyle(color: Colors.red)),
+              TextField(controller: _emailController, decoration: InputDecoration(labelText: 'username or Email')),
+              
+              
+              TextField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                                  labelText: "Password", ),
+                                  obscureText: true,
+                  
+                  
+              ),
+              ElevatedButton(
+                  onPressed: _signIn,
+                  child:  Text("sign in"),
+                
+                ),
+              TextButton(onPressed: _register, child: Text("Register"))
+            ],
+          );
+            }
+           
+          
+          ),
+          
+        );
+      },
+    );
+  }
+
+
+
   void _selectedTask(bool ?status, String name,String id){
    selectedTaskList[name]= status??false;
    setState(() {
@@ -119,48 +223,48 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
           SizedBox(width: 20,),
            DropdownButton<String>(
                 hint: Text("filter by priority"),
-                value: _filterPriority,
-                items: dropdownmenuList.map<DropdownMenuItem<String>>((String value){
+                value: _filterPriority!.isNotEmpty ? _filterPriority : null,
+                items:dropdownmenuList
+      .where((value) => value.isNotEmpty).map<DropdownMenuItem<String>>((String value){
                       return DropdownMenuItem<String>(value: value, child:
                       Text(value));
                 }).toList(),
 
                 
                
-                onChanged: (String? value) { 
-                  setState(() {
-                    _filterCompletionStatus = value!;
-                    if(value == 'incomplete'){
-                      _completionStatusFilter = false;
-                    }
-                    else if(value =='complete'){
-                      _completionStatusFilter = true;
-                    }
-                    
-                  });
+                onChanged: (String? value) {
+  setState(() {
+    _filterPriority = value??'';
+  });
+},
 
-                 },
                 
                 
                 ),
                 SizedBox(width: 20,),
            DropdownButton<String>(
                 hint: Text("filter by completion Status"),
-                value: _filterCompletionStatus,
-                items: dropdownCompletionmenuList.map<DropdownMenuItem<String>>((String value){
+                value: _filterCompletionStatus?.isNotEmpty == true ? _filterCompletionStatus : null,
+                items: dropdownCompletionmenuList
+      .where((value) => value.isNotEmpty).map<DropdownMenuItem<String>>((String value){
                       return DropdownMenuItem<String>(value: value, child:
                       Text(value));
                 }).toList(),
 
                 
                
-                onChanged: (String? value) { 
-                  setState(() {
-                    _filterCompletionStatus = value!;
-                    
-                  });
+               onChanged: (String? value) { 
+  setState(() {
+    _filterCompletionStatus = value!;
+    if(value == 'incomplete'){
+      _completionStatusFilter = false;
+    }
+    else if(value =='complete'){
+      _completionStatusFilter = true;
+    }
+  });
+},
 
-                 },
                 
                 
                 ),
@@ -169,13 +273,14 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
           StreamBuilder(
         stream: query.snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            var docs = snapshot.data!.docs;
+           
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(child: Text('No inventory items available.'));
           }
+           var docs = snapshot.data!.docs;
           
           selectedTaskList = {
             for (var doc in docs)
@@ -303,23 +408,21 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
                   decoration: InputDecoration(
                                   labelText: "Due Date", ),
                   readOnly: true,
-                  onTap: ()async{
-                    DateTime? pickedDate = await showDatePicker(
-                        context: context, 
-                        firstDate: DateTime(2000), 
-                        lastDate: DateTime(2101),
-                        initialDate: DateTime.now(),
-                        );
-                        if(pickedDate !=null){
-                          String formatedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
-                          setState(() {
-                               dateController.text = formatedDate;
-                              });
-                          
+onTap: () async {
+  DateTime? pickedDate = await showDatePicker(
+    context: context,
+    initialDate: DateTime.now(),
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2100),
+  );
+  if (pickedDate != null) {
+    String formattedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
+    setState(() {
+      dateController.text = formattedDate;
+    });
+  }
+},
 
-                  }
-
-                  },
                   
               ),
               DropdownButton<String>(
